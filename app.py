@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-汽修门店智能营销工具 - 单文件完整版
+汽修门店智能营销工具 - 单文件完整版（修复版）
 """
 
 import streamlit as st
@@ -27,7 +27,7 @@ def init_database():
     """初始化数据库"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS customers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +54,7 @@ def init_database():
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
+
     conn.commit()
     conn.close()
 
@@ -62,7 +62,7 @@ def add_customer(customer_data):
     """添加客户"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     cursor.execute('''
         INSERT INTO customers (
             customer_name, phone, plate_number, car_brand, car_model,
@@ -92,7 +92,7 @@ def add_customer(customer_data):
         customer_data.get('recommended_reason'),
         customer_data.get('is_marketed', 0)
     ))
-    
+
     customer_id = cursor.lastrowid
     conn.commit()
     conn.close()
@@ -150,20 +150,20 @@ def update_customer(customer_id, customer_data):
     """更新客户"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     customer_data['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
+
     set_clauses = []
     values = []
     for key, value in customer_data.items():
         if key not in ['id', 'created_at']:
             set_clauses.append(f"{key} = ?")
             values.append(value)
-    
+
     values.append(customer_id)
-    
+
     cursor.execute(f'UPDATE customers SET {", ".join(set_clauses)} WHERE id = ?', values)
-    
+
     conn.commit()
     conn.close()
 
@@ -180,16 +180,16 @@ def check_duplicate_phone(phone):
 
 class ExcelImporter:
     """Excel导入处理器"""
-    
+
     FIELD_MAPPING = {
-        'customer_name': ['客户姓名', '姓名', '客户名称', '车主姓名', 'name'],
-        'phone': ['手机号', '手机', '电话号码', '联系电话', '电话', 'TEL'],
-        'plate_number': ['车牌号', '车牌', '牌照', '车牌号码'],
-        'car_brand': ['汽车品牌', '品牌', '车辆品牌', '厂商'],
-        'car_model': ['车型', '车系', '车辆型号', '车款'],
-        'car_age': ['车龄', '车辆年龄'],
+        'customer_name': ['客户姓名', '姓名', '客户名称', '车主姓名', 'name', '客户名'],
+        'phone': ['手机号', '手机', '电话号码', '联系电话', '电话', 'TEL', 'mobile'],
+        'plate_number': ['车牌号', '车牌', '牌照', '车牌号码', 'car_plate'],
+        'car_brand': ['汽车品牌', '品牌', '车辆品牌', '厂商', 'car_brand'],
+        'car_model': ['车型', '车系', '车辆型号', '车款', 'car_model'],
+        'car_age': ['车龄', '车辆年龄', 'car_age'],
         'mileage': ['里程', '公里数', '行驶里程', '总里程', '公里'],
-        'gender': ['性别', '男', '女'],
+        'gender': ['性别'],
         'age': ['年龄', '客户年龄'],
         'last_visit_date': ['最近到店日期', '最后到店日期', '上次到店日期', '到店日期'],
         'maintenance_records': ['保养记录', '保养历史'],
@@ -197,11 +197,11 @@ class ExcelImporter:
         'last_maintenance_mileage': ['上次保养里程', '保养里程'],
         'last_maintenance_date': ['上次保养日期', '保养日期']
     }
-    
+
     def __init__(self):
         self.df = None
         self.column_mapping = {}
-    
+
     def load_file(self, uploaded_file):
         """加载文件"""
         try:
@@ -210,112 +210,133 @@ class ExcelImporter:
             return True, f"成功加载文件，共{len(self.df)}行数据"
         except Exception as e:
             return False, f"加载文件失败：{str(e)}"
-    
+
     def auto_detect_columns(self):
         """自动检测列名"""
         detected_mapping = {}
-        
+
         for col_name in self.df.columns:
             col_clean = col_name.strip().upper()
-            
+
             for standard_field, variants in self.FIELD_MAPPING.items():
                 for variant in variants:
                     if col_clean == variant.upper():
                         detected_mapping[col_name] = standard_field
                         break
-        
+
         self.column_mapping = detected_mapping
         return detected_mapping
-    
+
     def validate_phone(self, phone):
         """验证手机号"""
         if pd.isna(phone) or str(phone).strip() == '':
             return False, "手机号不能为空"
-        
+
         phone_clean = re.sub(r'[\s\-\(\)\（\）]', '', str(phone).strip())
-        
+
         if not re.match(r'^1[3-9]\d{9}$', phone_clean):
             return False, f"手机号格式不正确：{phone}"
-        
+
         return True, phone_clean
-    
+
     def validate_field(self, field_name, value):
-        """验证字段"""
-        if pd.isna(value) or str(value).strip() == '':
-            if field_name in ['customer_name', 'phone']:
-                return False, None, f"{field_name}为必填字段"
-            return True, None, ""
-        
-        value_clean = str(value).strip()
-        
-        if field_name == 'phone':
-            return self.validate_phone(value)
-        elif field_name in ['car_age', 'mileage', 'age']:
-            try:
-                return True, int(float(value_clean)), ""
-            except:
+        """验证字段 - 增强错误处理"""
+        try:
+            if pd.isna(value) or str(value).strip() == '':
+                if field_name in ['customer_name', 'phone']:
+                    return False, None, f"{field_name}为必填字段"
                 return True, None, ""
-        elif field_name == 'last_visit_date' or field_name == 'last_maintenance_date':
-            try:
-                parsed_date = pd.to_datetime(value)
-                return True, parsed_date.strftime('%Y-%m-%d'), ""
-            except:
-                return True, None, ""
-        
-        return True, value_clean, ""
-    
+
+            value_clean = str(value).strip()
+
+            if field_name == 'phone':
+                return self.validate_phone(value)
+            elif field_name in ['car_age', 'mileage', 'age', 'last_maintenance_mileage']:
+                try:
+                    num_value = int(float(value_clean))
+                    return True, num_value, ""
+                except:
+                    return True, None, ""
+            elif field_name == 'last_visit_date' or field_name == 'last_maintenance_date':
+                try:
+                    if isinstance(value, pd.Timestamp):
+                        return True, value.strftime('%Y-%m-%d'), ""
+                    parsed_date = pd.to_datetime(value)
+                    return True, parsed_date.strftime('%Y-%m-%d'), ""
+                except:
+                    return True, None, ""
+
+            return True, value_clean, ""
+        except Exception as e:
+            # 如果验证出错，返回成功但不存储该字段
+            return True, None, f"字段验证跳过：{str(e)}"
+
     def transform_data(self):
         """转换数据"""
         records = []
         errors = []
-        
+
         for idx, row in self.df.iterrows():
-            record = {}
-            row_errors = []
-            
-            for original_col, standard_field in self.column_mapping.items():
-                value = row.get(original_col)
-                is_valid, cleaned_value, error_msg = self.validate_field(standard_field, value)
-                
-                if not is_valid:
-                    row_errors.append(f"行{idx+2}: {error_msg}")
+            try:
+                record = {}
+                row_errors = []
+
+                for original_col, standard_field in self.column_mapping.items():
+                    try:
+                        value = row.get(original_col)
+                        is_valid, cleaned_value, error_msg = self.validate_field(standard_field, value)
+
+                        if not is_valid:
+                            row_errors.append(f"行{idx+2}: {error_msg}")
+                            continue
+
+                        if cleaned_value is not None:
+                            record[standard_field] = cleaned_value
+
+                        if error_msg and '验证跳过' not in error_msg:
+                            row_errors.append(f"行{idx+2}: {error_msg}")
+                    except Exception as e:
+                        continue
+
+                # 检查必填字段
+                if 'customer_name' not in record:
+                    row_errors.append(f"行{idx+2}: 缺少客户姓名")
+                if 'phone' not in record:
+                    row_errors.append(f"行{idx+2}: 缺少手机号")
+
+                if row_errors:
+                    errors.extend(row_errors[:3])  # 限制每个客户最多显示3个错误
                     continue
-                
-                if cleaned_value is not None:
-                    record[standard_field] = cleaned_value
-            
-            if 'customer_name' not in record:
-                row_errors.append(f"行{idx+2}: 缺少客户姓名")
-            if 'phone' not in record:
-                row_errors.append(f"行{idx+2}: 缺少手机号")
-            
-            if row_errors:
-                errors.extend(row_errors)
+
+                # 检查重复手机号
+                if check_duplicate_phone(record['phone']):
+                    continue
+
+                records.append(record)
+            except Exception as e:
+                errors.append(f"行{idx+2}: 处理失败")
                 continue
-            
-            if check_duplicate_phone(record['phone']):
-                continue
-            
-            records.append(record)
-        
+
         return records, errors
-    
+
     def import_to_database(self, file_name):
         """导入到数据库"""
         records, errors = self.transform_data()
-        
+
         success_count = 0
+        fail_count = 0
+
         for record in records:
             try:
                 add_customer(record)
                 success_count += 1
-            except:
-                pass
-        
+            except Exception as e:
+                fail_count += 1
+
         return {
-            'total': len(self.df),
+            'total': len(self.df) if self.df is not None else 0,
             'success': success_count,
-            'fail': len(errors),
+            'fail': fail_count + len(errors),
             'errors': errors[:20]
         }
 
@@ -323,7 +344,7 @@ class ExcelImporter:
 
 class MarketingEngine:
     """营销方案匹配引擎"""
-    
+
     TEMPLATES = {
         '流失召回_B': {
             'name': '流失召回B方案（高优先级）',
@@ -427,74 +448,77 @@ class MarketingEngine:
             'tips': '默认方案'
         }
     }
-    
+
     def calculate_days_since_visit(self, last_visit_date):
         """计算距上次到店天数"""
         if not last_visit_date:
             return None
         try:
-            last_date = datetime.strptime(last_visit_date, '%Y-%m-%d').date()
+            last_date = datetime.strptime(str(last_visit_date).split()[0], '%Y-%m-%d').date()
             return (date.today() - last_date).days
         except:
             return None
-    
+
     def check_maintenance_due(self, customer):
         """检查保养是否到期"""
         results = {'is_due': False, 'messages': []}
-        
+
         last_mileage = customer.get('last_maintenance_mileage')
         current_mileage = customer.get('mileage')
         last_date = customer.get('last_maintenance_date')
-        
+
         if last_mileage and current_mileage:
-            interval = current_mileage - last_mileage
-            if interval >= 5000:
-                results['is_due'] = True
-                results['messages'].append(f'已行驶{interval}公里，建议立即保养')
-            elif interval >= 4500:
-                results['messages'].append(f'已行驶{interval}公里，即将需要保养')
-        
+            try:
+                interval = int(current_mileage) - int(last_mileage)
+                if interval >= 5000:
+                    results['is_due'] = True
+                    results['messages'].append(f'已行驶{interval}公里，建议立即保养')
+                elif interval >= 4500:
+                    results['messages'].append(f'已行驶{interval}公里，即将需要保养')
+            except:
+                pass
+
         if last_date:
             try:
-                last = datetime.strptime(last_date, '%Y-%m-%d').date()
+                last = datetime.strptime(str(last_date).split()[0], '%Y-%m-%d').date()
                 months = (date.today() - last).days / 30
                 if months >= 6:
                     results['is_due'] = True
                     results['messages'].append(f'已{int(months)}个月未保养')
             except:
                 pass
-        
+
         return results
-    
+
     def match_template(self, customer):
         """匹配营销方案"""
         days_since_visit = self.calculate_days_since_visit(customer.get('last_visit_date'))
         maintenance_info = self.check_maintenance_due(customer)
-        
+
         # 流失风险60天以上
         if days_since_visit and days_since_visit > 60:
             return '流失召回_B', f'已{days_since_visit}天未到店，流失风险高'
-        
+
         # 保养到期
         if maintenance_info['is_due']:
             return '保养提醒', '、'.join(maintenance_info['messages'][:2])
-        
+
         # 流失风险30-60天
         if days_since_visit and days_since_visit > 30:
             return '流失召回_A', f'已{days_since_visit}天未到店，需要关注'
-        
+
         # 高端品牌客户
-        car_brand = customer.get('car_brand', '')
+        car_brand = str(customer.get('car_brand', ''))
         if car_brand in ['宝马', '奔驰', '奥迪', '保时捷', '雷克萨斯']:
             return '高价值维护', '高端品牌客户，需重点维护'
-        
+
         # 默认
         return '定期保养', '常规客户，定期关怀'
-    
+
     def generate_tags(self, customer):
         """生成客户标签"""
         tags = []
-        
+
         days_since_visit = self.calculate_days_since_visit(customer.get('last_visit_date'))
         if days_since_visit is not None:
             if days_since_visit > 60:
@@ -505,25 +529,28 @@ class MarketingEngine:
                 tags.append('活跃度下降')
             else:
                 tags.append('活跃客户')
-        
-        car_brand = customer.get('car_brand', '')
+
+        car_brand = str(customer.get('car_brand', ''))
         if car_brand in ['宝马', '奔驰', '奥迪', '保时捷', '雷克萨斯']:
             tags.append('高端品牌')
         elif car_brand in ['大众', '丰田', '本田', '日产']:
             tags.append('主流品牌')
-        
-        mileage = customer.get('mileage', 0)
-        if mileage > 100000:
-            tags.append('高里程')
-        elif mileage > 50000:
-            tags.append('中里程')
-        
+
+        try:
+            mileage = int(customer.get('mileage', 0))
+            if mileage > 100000:
+                tags.append('高里程')
+            elif mileage > 50000:
+                tags.append('中里程')
+        except:
+            pass
+
         return tags
-    
+
     def determine_customer_type(self, customer):
         """确定客户类型"""
         days_since_visit = self.calculate_days_since_visit(customer.get('last_visit_date'))
-        
+
         if days_since_visit is not None:
             if days_since_visit > 60:
                 return '流失风险'
@@ -533,49 +560,51 @@ class MarketingEngine:
                 return '一般客户'
             else:
                 return '活跃客户'
-        
+
         return '新客户'
-    
+
     def process_all_customers(self, customers):
         """处理所有客户"""
         results = []
-        
-        for customer in customers:
-            template_type, reason = self.match_template(customer)
-            template = self.TEMPLATES.get(template_type, self.TEMPLATES['定期保养'])
-            tags = self.generate_tags(customer)
-            customer_type = self.determine_customer_type(customer)
-            
-            result = {
-                'customer_id': customer.get('id'),
-                'customer_name': customer.get('customer_name'),
-                'phone': customer.get('phone'),
-                'plate_number': customer.get('plate_number'),
-                'car_info': f"{customer.get('car_brand', '')} {customer.get('car_model', '')}".strip(),
-                'customer_type': customer_type,
-                'tags': ','.join(tags),
-                'template_type': template_type,
-                'template_name': template['name'],
-                'template_title': template['title'],
-                'template_content': template['content'],
-                'priority': template['priority'],
-                'reason': reason
-            }
-            
-            results.append(result)
-            
-            # 更新客户记录
-            update_customer(customer['id'], {
-                'tags': result['tags'],
-                'customer_type': result['customer_type'],
-                'recommended_template': result['template_name'],
-                'recommended_reason': result['reason'],
-                'is_marketed': 1
-            })
-        
-        return results
 
-# ==================== Streamlit界面 ====================
+        for customer in customers:
+            try:
+                template_type, reason = self.match_template(customer)
+                template = self.TEMPLATES.get(template_type, self.TEMPLATES['定期保养'])
+                tags = self.generate_tags(customer)
+                customer_type = self.determine_customer_type(customer)
+
+                result = {
+                    'customer_id': customer.get('id'),
+                    'customer_name': customer.get('customer_name'),
+                    'phone': customer.get('phone'),
+                    'plate_number': customer.get('plate_number'),
+                    'car_info': f"{customer.get('car_brand', '')} {customer.get('car_model', '')}".strip(),
+                    'customer_type': customer_type,
+                    'tags': ','.join(tags),
+                    'template_type': template_type,
+                    'template_name': template['name'],
+                    'template_title': template['title'],
+                    'template_content': template['content'],
+                    'priority': template['priority'],
+                    'reason': reason
+                }
+
+                results.append(result)
+
+                # 更新客户记录
+                update_customer(customer['id'], {
+                    'tags': result['tags'],
+                    'customer_type': result['customer_type'],
+                    'recommended_template': result['template_name'],
+                    'recommended_reason': result['reason'],
+                    'is_marketed': 1
+                })
+            except:
+                continue
+
+        return results
+        # ==================== Streamlit界面 ====================
 
 st.set_page_config(
     page_title="汽修门店智能营销工具",
@@ -599,30 +628,30 @@ page = st.sidebar.selectbox(
 if page == "🏠 首页概览":
     st.title("🚗 汽修门店智能营销工具")
     st.markdown("---")
-    
+
     customers = get_all_customers()
-    
+
     col1, col2, col3, col4 = st.columns(4)
-    
+
     with col1:
         st.metric("客户总数", len(customers))
-    
+
     with col2:
         this_month = len([c for c in customers if c.get('created_at', '').startswith(datetime.now().strftime('%Y-%m'))])
         st.metric("本月新增", this_month)
-    
+
     with col3:
         pending = len([c for c in customers if not c.get('is_marketed')])
         st.metric("待营销客户", pending)
-    
+
     with col4:
         risk = len([c for c in customers if c.get('customer_type') == '流失风险'])
         st.metric("流失风险客户", risk)
-    
+
     st.markdown("---")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.subheader("🚙 品牌分布")
         brand_data = get_brand_distribution()
@@ -631,8 +660,8 @@ if page == "🏠 首页概览":
             fig = px.pie(df, values='count', names='brand', title='客户车辆品牌分布')
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("暂无品牌数据")
-    
+            st.info("暂无品牌数据，请先导入客户数据")
+
     with col2:
         st.subheader("👤 客户类型分布")
         type_data = get_customer_type_distribution()
@@ -641,142 +670,162 @@ if page == "🏠 首页概览":
             fig = px.bar(df, x='type', y='count', title='客户类型分布', color='type')
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("暂无客户数据")
+            st.info("暂无客户数据，请先导入客户")
 
 elif page == "👥 客户管理":
     st.header("👥 客户管理")
-    
+
     customers = get_all_customers()
-    
-    search = st.text_input("🔍 搜索客户", placeholder="输入姓名、车牌或手机号...")
-    
-    if search:
-        customers = [c for c in customers 
-                    if search.lower() in str(c.get('customer_name', '')).lower()
-                    or search.lower() in str(c.get('phone', '')).lower()
-                    or search.lower() in str(c.get('plate_number', '')).lower()]
-    
-    st.markdown(f"**共找到 {len(customers)} 位客户**")
-    
-    if customers:
+
+    if not customers:
+        st.info("暂无客户数据，请先导入客户")
+    else:
+        search = st.text_input("🔍 搜索客户", placeholder="输入姓名、车牌或手机号...")
+
+        if search:
+            customers = [c for c in customers
+                        if search.lower() in str(c.get('customer_name', '')).lower()
+                        or search.lower() in str(c.get('phone', '')).lower()
+                        or search.lower() in str(c.get('plate_number', '')).lower()]
+
+        st.markdown(f"**共找到 {len(customers)} 位客户**")
+
         df = pd.DataFrame(customers)
         display_cols = ['id', 'customer_name', 'phone', 'plate_number', 'car_brand', 'customer_type']
         available = [c for c in display_cols if c in df.columns]
         df_display = df[available].copy()
         df_display.columns = ['ID', '姓名', '手机', '车牌', '品牌', '客户类型']
         st.dataframe(df_display, use_container_width=True, hide_index=True)
-        
+
         st.markdown("---")
         st.subheader("📋 客户详情")
-        
-        selected_id = st.selectbox("选择客户查看详情", 
-                                   options=[c['id'] for c in customers],
-                                   format_func=lambda x: f"{x} - {[c['customer_name'] for c in customers if c['id']==x][0]}")
-        
-        if selected_id:
-            customer = get_customer_by_id(selected_id)
-            if customer:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.write("**基本信息**")
-                    st.write(f"• 姓名：{customer.get('customer_name', 'N/A')}")
-                    st.write(f"• 手机：{customer.get('phone', 'N/A')}")
-                    st.write(f"• 性别：{customer.get('gender', 'N/A')}")
-                    st.write(f"• 年龄：{customer.get('age', 'N/A')}岁")
-                
-                with col2:
-                    st.write("**车辆信息**")
-                    st.write(f"• 车牌：{customer.get('plate_number', 'N/A')}")
-                    st.write(f"• 品牌：{customer.get('car_brand', 'N/A')}")
-                    st.write(f"• 车型：{customer.get('car_model', 'N/A')}")
-                    st.write(f"• 车龄：{customer.get('car_age', 'N/A')}年")
-                    st.write(f"• 里程：{customer.get('mileage', 'N/A')}公里")
-                
-                st.write("**分析信息**")
-                col3, col4 = st.columns(2)
-                
-                with col3:
-                    st.write(f"• 客户类型：{customer.get('customer_type', 'N/A')}")
-                    st.write(f"• 标签：{customer.get('tags', 'N/A')}")
-                
-                with col4:
-                    st.write(f"• 最近到店：{customer.get('last_visit_date', 'N/A')}")
-                    st.write(f"• 推荐方案：{customer.get('recommended_template', 'N/A')}")
-                
-                if customer.get('recommended_template'):
-                    st.markdown("**📝 推荐营销内容**")
-                    st.info(customer.get('recommended_reason', ''))
-    else:
-        st.info("暂无客户数据，请先导入客户")
+
+        if customers:
+            selected_id = st.selectbox("选择客户查看详情",
+                                    options=[c['id'] for c in customers],
+                                    format_func=lambda x: f"{x} - {[c['customer_name'] for c in customers if c['id']==x][0]}")
+
+            if selected_id:
+                customer = get_customer_by_id(selected_id)
+                if customer:
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.write("**基本信息**")
+                        st.write(f"• 姓名：{customer.get('customer_name', 'N/A')}")
+                        st.write(f"• 手机：{customer.get('phone', 'N/A')}")
+                        st.write(f"• 性别：{customer.get('gender', 'N/A')}")
+                        st.write(f"• 年龄：{customer.get('age', 'N/A')}岁")
+
+                    with col2:
+                        st.write("**车辆信息**")
+                        st.write(f"• 车牌：{customer.get('plate_number', 'N/A')}")
+                        st.write(f"• 品牌：{customer.get('car_brand', 'N/A')}")
+                        st.write(f"• 车型：{customer.get('car_model', 'N/A')}")
+                        st.write(f"• 车龄：{customer.get('car_age', 'N/A')}年")
+                        st.write(f"• 里程：{customer.get('mileage', 'N/A')}公里")
+
+                    st.write("**分析信息**")
+                    col3, col4 = st.columns(2)
+
+                    with col3:
+                        st.write(f"• 客户类型：{customer.get('customer_type', 'N/A')}")
+                        st.write(f"• 标签：{customer.get('tags', 'N/A')}")
+
+                    with col4:
+                        st.write(f"• 最近到店：{customer.get('last_visit_date', 'N/A')}")
+                        st.write(f"• 推荐方案：{customer.get('recommended_template', 'N/A')}")
+
+                    if customer.get('recommended_template'):
+                        st.markdown("**📝 推荐营销内容**")
+                        st.info(customer.get('recommended_reason', ''))
 
 elif page == "📥 导入客户":
     st.header("📥 导入客户数据")
-    
+
     st.info("""
-    **导入说明：**
-    - 必填项：客户姓名、手机号
-    - 选填项：车牌号、汽车品牌、车型等
-    - 支持.xlsx格式的Excel文件
+    **📋 导入说明：**
+    - ✅ 必填项：客户姓名、手机号
+    - 📝 选填项：车牌号、汽车品牌、车型、车龄、里程等
+    - 📁 支持.xlsx格式的Excel文件
+    - 💡 系统会自动识别常见列名
     """)
-    
+
     uploaded_file = st.file_uploader("选择Excel文件", type=['xlsx', 'xls'])
-    
+
     if uploaded_file:
         importer = ExcelImporter()
         success, message = importer.load_file(uploaded_file)
-        
+
         if success:
             st.success(message)
-            
+
             detected = importer.auto_detect_columns()
-            
+
             if detected:
-                st.write("**已识别的字段映射：**")
+                st.write("**✅ 已识别的字段映射：**")
                 for original, standard in detected.items():
                     st.write(f"• **{original}** → **{standard}**")
-            
-            st.subheader("数据预览（前10行）")
+
+            # 检查未识别列
+            unmapped = [col for col in importer.df.columns if col not in detected]
+            if unmapped:
+                st.warning(f"**⚠️ 未识别的列：** {', '.join(unmapped)}，这些列将被忽略")
+
+            st.subheader("👀 数据预览（前10行）")
             st.dataframe(importer.df.head(10), use_container_width=True)
-            
+
             st.markdown("---")
-            
+
             if st.button("🚀 开始导入", type="primary", use_container_width=True):
-                with st.spinner("正在导入..."):
-                    result = importer.import_to_database(uploaded_file.name)
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("总记录数", result['total'])
-                with col2:
-                    st.metric("成功导入", result['success'])
-                with col3:
-                    st.metric("失败", result['fail'])
-                
-                if result['success'] > 0:
-                    st.success(f"✅ 成功导入 {result['success']} 条客户数据！")
+                with st.spinner("正在导入数据，请稍候..."):
+                    try:
+                        result = importer.import_to_database(uploaded_file.name)
+
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            st.metric("总记录数", result['total'])
+                        with col2:
+                            st.metric("✅ 成功导入", result['success'])
+                        with col3:
+                            st.metric("❌ 失败", result['fail'])
+
+                        if result['errors']:
+                            with st.expander("⚠️ 查看错误信息"):
+                                for error in result['errors'][:10]:
+                                    st.write(f"• {error}")
+
+                        if result['success'] > 0:
+                            st.success(f"🎉 成功导入 {result['success']} 条客户数据！请到「客户管理」页面查看。")
+                    except Exception as e:
+                        st.error(f"导入失败：{str(e)}")
         else:
             st.error(message)
 
 elif page == "📝 营销推荐":
     st.header("📝 智能营销推荐")
-    
+
     customers = get_all_customers()
-    
+
     if not customers:
         st.warning("暂无客户数据，请先导入客户")
     else:
+        st.info(f"当前共有 {len(customers)} 位客户，点击下方按钮为所有客户生成推荐方案")
+
         if st.button("🚀 为所有客户生成推荐方案", type="primary", use_container_width=True):
-            with st.spinner("正在分析客户数据..."):
-                engine = MarketingEngine()
-                results = engine.process_all_customers(customers)
-                st.session_state['results'] = results
-                st.success(f"已为 {len(results)} 位客户生成推荐方案！")
-        
-        if 'results' in st.session_state:
+            with st.spinner("正在分析客户数据，生成推荐方案..."):
+                try:
+                    engine = MarketingEngine()
+                    results = engine.process_all_customers(customers)
+                    st.session_state['results'] = results
+                    st.success(f"✅ 已为 {len(results)} 位客户生成推荐方案！")
+                except Exception as e:
+                    st.error(f"生成失败：{str(e)}")
+
+        if 'results' in st.session_state and st.session_state['results']:
             results = st.session_state['results']
-            
+
             # 按方案类型分组统计
             summary = {}
             for r in results:
@@ -790,50 +839,58 @@ elif page == "📝 营销推荐":
                     }
                 summary[template_type]['count'] += 1
                 summary[template_type]['customers'].append(r)
-            
+
             st.markdown("---")
             st.subheader("📊 推荐结果汇总")
-            
+
             for template_type, info in summary.items():
-                with st.expander(f"📋 {info['name']} ({info['count']}人)", expanded=True):
+                priority_label = {'high': '🔴 高', 'medium': '🟡 中', 'low': '🟢 低'}.get(info['priority'], '')
+
+                with st.expander(f"📋 {info['name']} ({info['count']}人) {priority_label}", expanded=True):
                     col1, col2 = st.columns([1, 3])
-                    
+
                     with col1:
-                        st.write(f"**优先级：** {'高' if info['priority']=='high' else '中' if info['priority']=='medium' else '低'}")
                         st.write(f"**客户数：** {info['count']}")
-                    
+                        st.write(f"**类型：** {template_type}")
+
                     with col2:
-                        customer_df = pd.DataFrame(info['customers'])
-                        st.dataframe(customer_df[['customer_name', 'phone', 'car_info', 'reason']], 
-                                   use_container_width=True, hide_index=True)
-            
+                        if info['customers']:
+                            customer_df = pd.DataFrame(info['customers'])
+                            st.dataframe(customer_df[['customer_name', 'phone', 'car_info', 'reason']],
+                                       use_container_width=True, hide_index=True)
+
             st.markdown("---")
-            
-            if st.button("📥 导出推荐结果Excel", use_container_width=True):
-                export_df = pd.DataFrame(results)
-                export_df.columns = ['客户ID', '姓名', '手机', '车牌', '车型', '客户类型', '标签', 
-                                    '方案类型', '方案名称', '营销标题', '营销内容', '优先级', '推荐理由']
-                
-                output = export_df.to_excel(index=False, engine='openpyxl')
-                st.download_button(
-                    label="点击下载Excel",
-                    data=output,
-                    file_name="营销推荐结果.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+
+            # 导出功能
+            export_df = pd.DataFrame(results)
+            export_df.columns = ['客户ID', '姓名', '手机', '车牌', '车型', '客户类型', '标签',
+                                '方案类型', '方案名称', '营销标题', '营销内容', '优先级', '推荐理由']
+
+            from io import BytesIO
+            output = BytesIO()
+            export_df.to_excel(output, index=False, engine='openpyxl')
+            output.seek(0)
+
+            st.download_button(
+                label="📥 导出推荐结果Excel",
+                data=output,
+                file_name="营销推荐结果.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
 
 elif page == "📊 数据统计":
     st.header("📊 数据统计分析")
-    
+
     customers = get_all_customers()
-    
+
     if not customers:
         st.warning("暂无客户数据")
     else:
         df = pd.DataFrame(customers)
-        
+
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
             st.metric("客户总数", len(customers))
         with col2:
@@ -845,23 +902,25 @@ elif page == "📊 数据统计":
         with col4:
             pending = len([c for c in customers if not c.get('is_marketed')])
             st.metric("待营销", pending)
-        
+
         st.markdown("---")
-        
-        tab1, tab2 = st.tabs(["品牌分析", "客户分析"])
-        
+
+        tab1, tab2 = st.tabs(["🚙 品牌分析", "👤 客户分析"])
+
         with tab1:
             if 'car_brand' in df.columns:
                 brand_counts = df['car_brand'].value_counts().reset_index()
                 brand_counts.columns = ['品牌', '数量']
-                
-                fig = px.bar(brand_counts, x='品牌', y='数量', title='各品牌客户数量', color='数量')
-                st.plotly_chart(fig, use_container_width=True)
-        
+
+                if not brand_counts.empty:
+                    fig = px.bar(brand_counts, x='品牌', y='数量', title='各品牌客户数量', color='数量')
+                    st.plotly_chart(fig, use_container_width=True)
+
         with tab2:
             if 'customer_type' in df.columns:
                 type_counts = df['customer_type'].value_counts().reset_index()
                 type_counts.columns = ['客户类型', '数量']
-                
-                fig = px.pie(type_counts, values='数量', names='客户类型', title='客户类型分布')
-                st.plotly_chart(fig, use_container_width=True)
+
+                if not type_counts.empty:
+                    fig = px.pie(type_counts, values='数量', names='客户类型', title='客户类型分布')
+                    st.plotly_chart(fig, use_container_width=True)
