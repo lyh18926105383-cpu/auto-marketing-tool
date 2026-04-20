@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
-import { Upload, Download, Settings, X, Truck } from 'lucide-react';
+import { Upload, Download, Settings, X, Wrench, Trash2 } from 'lucide-react';
 
-const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, onImport, onDownloadTemplate }) => {
+const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, onImport, onDownloadTemplate, onClearAll }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [localName, setLocalName] = useState(storeName);
   const [localPhone, setLocalPhone] = useState(storePhone);
   const fileInputRef = useRef(null);
@@ -21,11 +22,16 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
     setShowSettings(false);
   };
 
+  const handleClearAll = () => {
+    setShowClearConfirm(false);
+    onClearAll();
+  };
+
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+    <header className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Truck className="text-white w-5 h-5" />
+        <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center">
+          <Wrench className="text-white w-5 h-5" />
         </div>
         <div>
           <h1 className="text-base font-semibold text-gray-900 leading-tight">汽修智能营销</h1>
@@ -44,7 +50,7 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
         >
           <Upload size={16} />
           <span>导入</span>
@@ -60,6 +66,14 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
         />
 
         <button
+          onClick={() => setShowClearConfirm(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+        >
+          <Trash2 size={16} />
+          <span>清空</span>
+        </button>
+
+        <button
           onClick={() => {
             setLocalName(storeName);
             setLocalPhone(storePhone);
@@ -72,8 +86,42 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
         </button>
       </div>
 
+      {/* 清空确认弹窗 */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">确认清空</h2>
+                <p className="text-sm text-gray-500">此操作不可恢复</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              确定要清空所有客户数据吗？此操作将删除所有客户信息，且无法恢复。
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
+              >
+                确认清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showSettings && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900">门店设置</h2>
@@ -124,7 +172,7 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
               </button>
               <button
                 onClick={handleSaveSettings}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
               >
                 保存
               </button>

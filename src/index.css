@@ -10,7 +10,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-  background-color: #f0f2f6;
+  background-color: #f5f5f5;
   color: #262627;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -32,10 +32,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c9ccd4;
+  background: #e0e0e0;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a9acb4;
+  background: #bdbdbd;
 }

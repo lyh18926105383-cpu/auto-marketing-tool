@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import CustomerList from './components/CustomerList';
 import CustomerDetail from './components/CustomerDetail';
-import { getAllCustomers, addOrUpdateCustomer } from './db/database';
+import { getAllCustomers, addOrUpdateCustomer, clearAllCustomers } from './db/database';
 import { processCustomerData } from './utils/prediction';
 import { importExcel, downloadTemplate } from './utils/excel';
 
@@ -69,9 +69,6 @@ function App() {
 
       const { customers: newCustomers, errors } = await importExcel(file);
 
-      console.log('Parsed customers:', newCustomers);
-      console.log('Errors:', errors);
-
       if (newCustomers.length === 0) {
         setImportStatus({ type: 'error', message: '导入失败: 没有有效数据' });
         setTimeout(() => setImportStatus(null), 3000);
@@ -103,10 +100,6 @@ function App() {
         message
       });
 
-      if (errors?.length > 0) {
-        console.warn('导入错误:', errors);
-      }
-
       setTimeout(() => setImportStatus(null), 3000);
     } catch (error) {
       setImportStatus({ type: 'error', message: error.message });
@@ -116,7 +109,6 @@ function App() {
 
   // 处理客户选择
   const handleSelectCustomer = (customer) => {
-    // 重新处理数据获取最新状态
     const processed = processCustomerData(customer);
     setSelectedCustomer(processed);
   };
@@ -126,8 +118,19 @@ function App() {
     downloadTemplate();
   };
 
+  // 处理清空所有客户
+  const handleClearAll = async () => {
+    try {
+      await clearAllCustomers();
+      setCustomers([]);
+      setSelectedCustomer(null);
+    } catch (error) {
+      console.error('清空客户数据失败:', error);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0f2f6]">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       <Header
         storeName={storeName}
         storePhone={storePhone}
@@ -135,14 +138,15 @@ function App() {
         onStorePhoneChange={handleStorePhoneChange}
         onImport={handleImport}
         onDownloadTemplate={handleDownloadTemplate}
+        onClearAll={handleClearAll}
       />
 
       {/* 导入状态提示 */}
       {importStatus && (
         <div
-          className={`mx-6 mt-3 p-2.5 rounded-md text-sm font-medium ${
+          className={`mx-6 mt-4 p-2.5 rounded-md text-sm font-medium ${
             importStatus.type === 'success'
-              ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+              ? 'bg-green-100 text-green-700 border border-green-200'
               : importStatus.type === 'error'
               ? 'bg-red-100 text-red-700 border border-red-200'
               : 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -153,10 +157,10 @@ function App() {
       )}
 
       {/* 主内容区 */}
-      <main className="flex-1 p-6 overflow-hidden">
-        <div className="h-full flex gap-6">
+      <main className="flex-1 p-10">
+        <div className="flex gap-10">
           {/* 左侧客户列表 */}
-          <div className="w-2/5 min-w-[350px]">
+          <div className="w-[420px] flex-shrink-0">
             <CustomerList
               customers={customers}
               selectedCustomer={selectedCustomer}
