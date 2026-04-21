@@ -3,8 +3,6 @@
 @import "tailwindcss";
 
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
@@ -38,4 +36,19 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #bdbdbd;
+}
+
+/* Custom component styles */
+.customer-list-container {
+  margin-top: 20px !important;
+  margin-bottom: 20px !important;
+  margin-left: 20px !important;
+  margin-right: 20px !important;
+}
+
+.customer-detail-empty {
+  margin-top: 20px !important;
+  margin-bottom: 20px !important;
+  margin-left: 20px !important;
+  margin-right: 20px !important;
 }

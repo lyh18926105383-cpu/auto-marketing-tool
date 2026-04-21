@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Upload, Download, Settings, X, Wrench, Trash2 } from 'lucide-react';
+import { UploadOutlined, DownloadOutlined, SettingOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
+import { Modal, Input } from 'antd';
 
 const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, onImport, onDownloadTemplate, onClearAll }) => {
   const [showSettings, setShowSettings] = useState(false);
@@ -28,31 +29,31 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-50">
+    <header className="bg-white border-b border-gray-200 px-10 py-5 flex items-center justify-between sticky top-0 z-50 h-[90px]">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center">
-          <Wrench className="text-white w-5 h-5" />
+        <div className="w-[50px] h-[50px] bg-blue-500 rounded-lg flex items-center justify-center ml-5 mr-5 pb-0 mb-2.5">
+          <ToolOutlined />
         </div>
         <div>
-          <h1 className="text-base font-semibold text-gray-900 leading-tight">汽修智能营销</h1>
-          <p className="text-xs text-gray-500">{storeName}</p>
+          <h1 className="font-semibold text-gray-900 leading-tight h-[50px] w-[200px] mt-2.5 mb-2.5 pt-3.75 pb-2.5 text-[30px] ml-[-20px] text-left">汽修智能营销</h1>
+          <p className="text-xs text-gray-500 mt-0.75 mb-0.75 ml-[-20px] text-[13px]">{storeName}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <button
           onClick={onDownloadTemplate}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          <Download size={16} />
+          <DownloadOutlined />
           <span>模板</span>
         </button>
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
         >
-          <Upload size={16} />
+          <UploadOutlined />
           <span>导入</span>
         </button>
         <input
@@ -67,9 +68,9 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
 
         <button
           onClick={() => setShowClearConfirm(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
-          <Trash2 size={16} />
+          <DeleteOutlined />
           <span>清空</span>
         </button>
 
@@ -79,91 +80,59 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
             setLocalPhone(storePhone);
             setShowSettings(true);
           }}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          <Settings size={16} />
+          <SettingOutlined />
           <span>设置</span>
         </button>
       </div>
 
       {/* 清空确认弹窗 */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 size={20} className="text-red-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">确认清空</h2>
-                <p className="text-sm text-gray-500">此操作不可恢复</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              确定要清空所有客户数据吗？此操作将删除所有客户信息，且无法恢复。
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleClearAll}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
-              >
-                确认清空
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        title="确认清空"
+        open={showClearConfirm}
+        onCancel={() => setShowClearConfirm(false)}
+        onOk={handleClearAll}
+        okText="确认清空"
+        okButtonProps={{ danger: true }}
+        cancelText="取消"
+      >
+        <p className="text-sm text-gray-600">
+          确定要清空所有客户数据吗？此操作将删除所有客户信息，且无法恢复。
+        </p>
+      </Modal>
 
       {showSettings && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-900">门店设置</h2>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="p-1 hover:bg-gray-100 rounded-md"
-              >
-                <X size={18} className="text-gray-400" />
-              </button>
+        <Modal
+          title="门店设置"
+          open={showSettings}
+          onCancel={() => setShowSettings(false)}
+          footer={null}
+        >
+          <div className="py-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                门店名称
+              </label>
+              <Input
+                value={localName}
+                onChange={(e) => setLocalName(e.target.value)}
+                placeholder="请输入门店名称"
+              />
             </div>
 
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  门店名称
-                </label>
-                <input
-                  type="text"
-                  id="storeName"
-                  name="storeName"
-                  value={localName}
-                  onChange={(e) => setLocalName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  门店电话
-                </label>
-                <input
-                  type="tel"
-                  id="storePhone"
-                  name="storePhone"
-                  value={localPhone}
-                  onChange={(e) => setLocalPhone(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                门店电话
+              </label>
+              <Input
+                value={localPhone}
+                onChange={(e) => setLocalPhone(e.target.value)}
+                placeholder="请输入门店电话"
+              />
             </div>
 
-            <div className="px-5 pb-5 flex gap-2">
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowSettings(false)}
                 className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
@@ -178,7 +147,7 @@ const Header = ({ storeName, storePhone, onStoreNameChange, onStorePhoneChange, 
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </header>
   );
