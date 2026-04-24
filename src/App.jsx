@@ -188,8 +188,8 @@ function App() {
 
       {/* 主内容区：左右布局，左侧客户列表，右侧详情面板，与顶部导航保持更大间距 */}
       <main className="flex-1 px-6 pb-6">
-        {/* 内部容器通过 padding-top 留出20px间距 */}
-        <div className="pt-5">
+        {/* 内部容器通过 padding-top 留出10px间距 */}
+        <div className="pt-2.5 pb-2.5">
           {/* 水平排列容器，左侧固定宽度440px，右侧自适应，间距20px，左边距16px，上下方间距20px */}
           <div className="flex gap-5 ml-4 mt-5 mb-5">
             {/* 左侧客户列表卡片：固定宽度440px，不收缩 */}

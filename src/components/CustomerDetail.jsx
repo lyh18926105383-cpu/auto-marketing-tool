@@ -70,7 +70,7 @@ const CustomerDetail = ({ customer, storeName, storePhone }) => {
     // 采用纵向布局，每个子模块之间间距12px，紧凑布局
     <div className="flex flex-col gap-3 overflow-y-auto">
       {/* ======= 模块1：客户基本信息卡片 ======= */}
-      <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm h-[180px]">
         {/* 顶部区域：车辆图标 + 车牌号 + 车型，水平排列，间距12px */}
         <div className="flex items-center gap-3 mb-3">
           {/* 车辆图标容器：蓝色背景，圆角8px，宽高40px，水平垂直居中 */}
@@ -90,7 +90,7 @@ const CustomerDetail = ({ customer, storeName, storePhone }) => {
         {/* 下方网格布局：2列，间距12px，用于展示客户姓名和电话 */}
         <div className="grid grid-cols-2 gap-3">
           {/* 客户姓名：灰色背景卡片，圆角8px，左侧图标 + 右侧文字信息 */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg h-[80px]">
             <User size={12} className="text-gray-400" />
             <div>
               <p className="text-xs text-gray-400">客户姓名</p>
@@ -98,7 +98,7 @@ const CustomerDetail = ({ customer, storeName, storePhone }) => {
             </div>
           </div>
           {/* 联系电话：结构同上 */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg h-[80px]">
             <Phone size={12} className="text-gray-400" />
             <div>
               <p className="text-xs text-gray-400">联系电话</p>

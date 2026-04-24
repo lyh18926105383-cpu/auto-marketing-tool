@@ -61,7 +61,7 @@ const CustomerList = ({
 
   return (
     // 整体采用纵向布局，白色背景，圆角12px，轻微阴影，溢出隐藏
-    <div className="flex flex-col bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden customer-list-container min-h-[400px]">
+    <div className="flex flex-col bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden customer-list-container min-h-[400px] mt-1.25 mb-1.25">
       {/* ======= 搜索框区域 ======= */}
       <div className="p-2.5 border-b border-gray-100 h-[50px]">
         <div className="relative">
@@ -128,8 +128,8 @@ const CustomerList = ({
 
       {/* ======= 底部统计栏 ======= */}
       {/* 左右分布布局，浅灰背景，底部分别设置圆角（与外层卡片衔接） */}
-      <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 text-sm text-gray-500 flex justify-between rounded-b-xl h-[22px]">
-        <span className="pl-2.5 pr-2.5 w-[73px] text-[13px]">共 {filteredCustomers.length} 位客户</span>
+      <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 text-sm text-gray-500 flex justify-between items-center rounded-b-xl h-[22px]">
+        <span className="pl-2.5 pr-2.5 w-auto text-[13px]">共 {filteredCustomers.length} 位客户</span>
         {/* 待跟进数量：根据criticalCount是否为0显示不同颜色和文字 */}
         <span className={criticalCount > 0 ? 'text-yellow-600 font-medium ml-3.75 mr-3.75 pl-2.5 pr-2.5' : 'text-green-600 font-medium ml-3.75 mr-3.75 pl-2.5 pr-2.5'}>
           {criticalCount > 0 ? `${criticalCount} 位待跟进` : '全部正常'}
